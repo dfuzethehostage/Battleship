@@ -42,6 +42,7 @@ class GameBoard {
   hitFields = [];
   missedFields = [];
   allShipsSunk = false;
+  recentlyGotHit = false;
 
   placeShip(ship) {
     ship.coordinates.forEach((coordinate) => {
@@ -84,6 +85,7 @@ class GameBoard {
 
   receiveAttack(attack) {
     let hit = false;
+    this.recentlyGotHit = false;
     this.ships.forEach((ship) => {
       ship.coordinates.forEach((coordinate) => {
         if (
@@ -94,9 +96,11 @@ class GameBoard {
           ship.hit();
           this.hitFields.push(coordinate);
           hit = true;
+          this.recentlyGotHit = true;
         }
       });
     });
+
     if (hit === false && this.validAttack(attack)) {
       this.missedFields.push(attack);
     }

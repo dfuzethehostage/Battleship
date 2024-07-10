@@ -46,6 +46,8 @@ for (let i = 0; i < 10; i++) {
 let gameIsOver = false;
 const player = new Player();
 const computer = new Player();
+let onTurn = player;
+console.log(player);
 computerPlaces();
 // game info
 
@@ -75,6 +77,8 @@ function drawBoatsOnSite(playerOrComputer, boatContainer) {
   });
 }
 
+// test state of game
+
 function testIfSomeoneWon() {
   if (player.gameBoard.allShipsSunk) {
     winner.innerText = "You Lost!";
@@ -85,6 +89,12 @@ function testIfSomeoneWon() {
     winner.innerText = "You have won!";
     gameIsOver = true;
   }
+}
+
+function testWhosTurnItIs(attackedPlayer, attackingPlayer) {
+  if (attackedPlayer.gameBoard.recentlyGotHit == true) {
+    onTurn = attackingPlayer;
+  } else onTurn = attackedPlayer;
 }
 
 //computer
@@ -114,25 +124,6 @@ function computerPlaces() {
     }
     computer.placeShip(newShip);
   }
-}
-
-function computerAttacks() {
-  let coordinatesX;
-  let coordinatesY;
-  let True = true;
-  while (True) {
-    coordinatesX = Math.floor(Math.random() * (10 - 0) + 0);
-    coordinatesY = Math.floor(Math.random() * (10 - 0) + 0);
-    if (player.gameBoard.validAttack([coordinatesY, coordinatesX])) {
-      True = false;
-    }
-  }
-  attackField(
-    gameBoardFields[coordinatesY][coordinatesX],
-    computer,
-    player,
-    gameBoardFields
-  );
 }
 
 // other functions
@@ -172,7 +163,7 @@ function addBoat(clickedField, playerOrComputer, gameBoardFields) {
 function drawBoats(playerOrComputer, gameBoardFields) {
   playerOrComputer.gameBoard.ships.forEach((ship) => {
     ship.coordinates.forEach((coord) => {
-      gameBoardFields[coord[0]][coord[1]].style.backgroundColor = "blue";
+      gameBoardFields[coord[0]][coord[1]].style.backgroundColor = "red";
     });
   });
 }
@@ -195,16 +186,35 @@ function attackField(
   gameBoardFields
 ) {
   let attackedPoint = getCoordinate(clickedField, gameBoardFields);
-  if (
-    attackingPlayer == player &&
-    attackedPlayer.gameBoard.validAttack(attackedPoint)
-  ) {
-    computerAttacks();
-  }
   attackingPlayer.attackGameBoard(attackedPlayer.gameBoard, attackedPoint);
 }
 
+function playerAttacks(clickedField) {
+  attackField(clickedField, player, computer, enemyGameBoardFields);
+}
+
+function computerAttacks() {
+  let coordinatesX;
+  let coordinatesY;
+  let True = true;
+  while (True) {
+    coordinatesX = Math.floor(Math.random() * (10 - 0) + 0);
+    coordinatesY = Math.floor(Math.random() * (10 - 0) + 0);
+    if (player.gameBoard.validAttack([coordinatesY, coordinatesX])) {
+      True = false;
+    }
+  }
+  attackField(
+    gameBoardFields[coordinatesY][coordinatesX],
+    computer,
+    player,
+    gameBoardFields
+  );
+}
+
 // game loop
+
+//placing phase
 
 gameBoard.addEventListener("click", (clickedField) => {
   if (clickedField.target !== gameBoard) {
@@ -219,15 +229,30 @@ gameBoard.addEventListener("click", (clickedField) => {
   }
 });
 
+//attack phase
 enemyGameBoard.addEventListener("click", (clickedField) => {
-  if (clickedField.target !== enemyGameBoard) {
+  console.log(player.gameBoard.recentlyGotHit);
+  console.log(computer.gameBoard.recentlyGotHit);
+  console.log(clickedField.target.style.backgroundColor);
+  let targetColor = clickedField.target.style.backgroundColor;
+  let isClicked =
+    targetColor === "green" || targetColor === "black" ? true : false;
+  if (clickedField.target !== enemyGameBoard && !isClicked) {
     if (!player.placingPhase && !gameIsOver) {
-      attackField(clickedField, player, computer, enemyGameBoardFields);
+      playerAttacks(clickedField);
       updateAttack(computer, enemyGameBoardFields);
-      updateAttack(player, gameBoardFields);
-      drawBoatsOnSite(player, boatsPlayer);
+
       drawBoatsOnSite(computer, boatsComputer);
       testIfSomeoneWon();
+      testWhosTurnItIs(computer, player);
+
+      while (onTurn == computer) {
+        computerAttacks();
+        updateAttack(player, gameBoardFields);
+        drawBoatsOnSite(player, boatsPlayer);
+        testIfSomeoneWon();
+        testWhosTurnItIs(player, computer);
+      }
     }
   }
 });
